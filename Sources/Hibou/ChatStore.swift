@@ -54,7 +54,10 @@ final class ChatStore: ObservableObject {
         return dir.appendingPathComponent("conversation.json")
     }
 
-    init() { load() }
+    init() {
+        load()
+        MCPDiscovery.refresh()
+    }
 
     func displayTitle(_ language: Language) -> String {
         title ?? language.t("Nouvelle conversation", "New conversation")

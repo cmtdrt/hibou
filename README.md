@@ -27,12 +27,14 @@ The script builds the app, copies it to `/Applications` and launches it. The owl
 
 ## Permissions
 
-Hibou does not ask for confirmation in the middle of a reply, so it offers two modes:
+Hibou does not ask for confirmation in the middle of a reply, so it pre-approves these permissions:
 
-- **Read-only** (default)
-- **Can edit files**
+- **Web search**
+- **Edit files**
+- **Terminal commands**
+- **Connectors** (MCP servers)
 
-Claude Code permission rules (`~/.claude/settings.json`) still apply.
+All of them are allowed by default and can be turned off in the settings. Claude Code permission rules (`~/.claude/settings.json`) still apply.
 
 ## Updating
 

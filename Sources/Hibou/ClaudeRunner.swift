@@ -33,8 +33,7 @@ final class ClaudeRunner {
             "--output-format", "stream-json",
             "--verbose",
             "--include-partial-messages",
-            "--permission-mode", Settings.permissionMode.rawValue,
-        ]
+        ] + Settings.permissionArguments()
         if let sessionID { args += ["--resume", sessionID] }
         p.arguments = args
         p.currentDirectoryURL = URL(fileURLWithPath: Settings.workingDirectory)
@@ -108,6 +107,10 @@ final class ClaudeRunner {
         if let parent = obj["parent_tool_use_id"], !(parent is NSNull) { return }
 
         switch type {
+        case "system":
+            if obj["subtype"] as? String == "init", let tools = obj["tools"] as? [String] {
+                MCPDiscovery.update(fromTools: tools)
+            }
         case "stream_event":
             guard let event = obj["event"] as? [String: Any],
                   let eventType = event["type"] as? String else { return }
