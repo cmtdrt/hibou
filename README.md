@@ -1,6 +1,4 @@
-# Hibou 🦉
-
-A tiny [Claude Code](https://docs.claude.com/en/docs/claude-code/overview) chat that lives in the macOS menu bar.
+# Hibou is a tiny [Claude Code](https://docs.claude.com/en/docs/claude-code/overview) chat that lives in the macOS menu bar.
 
 Click the owl, type or paste a message, press Return: Claude's reply appears in the popup. Click outside to close it. The conversation is kept until you start a new one.
 
