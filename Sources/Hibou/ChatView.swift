@@ -261,9 +261,7 @@ private struct MessageRow: View {
             if message.text.isEmpty {
                 thinking
             } else {
-                Text(markdown(message.text))
-                    .textSelection(.enabled)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                AssistantMessageView(text: message.text)
             }
         case .error:
             Label(message.text, systemImage: "exclamationmark.triangle")
@@ -280,10 +278,5 @@ private struct MessageRow: View {
                 .font(.callout)
                 .foregroundStyle(.secondary)
         }
-    }
-
-    private func markdown(_ text: String) -> AttributedString {
-        let options = AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)
-        return (try? AttributedString(markdown: text, options: options)) ?? AttributedString(text)
     }
 }
