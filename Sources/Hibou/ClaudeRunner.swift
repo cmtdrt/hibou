@@ -204,3 +204,40 @@ enum ClaudeLocator {
         return env
     }
 }
+
+extension ClaudeRunner {
+    /// Runs a one-shot `claude -p` (no streaming) and returns its `result` text, or nil on failure.
+    @discardableResult
+    static func runOnce(
+        arguments: [String],
+        input: String,
+        directory: String,
+        completion: @escaping (String?) -> Void
+    ) -> Process? {
+        guard let claude = ClaudeLocator.resolve() else { completion(nil); return nil }
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: claude)
+        p.arguments = ["-p", "--output-format", "json"] + arguments
+        p.currentDirectoryURL = URL(fileURLWithPath: directory)
+        p.environment = ClaudeLocator.environment(claudePath: claude)
+        let stdin = Pipe(), stdout = Pipe()
+        p.standardInput = stdin
+        p.standardOutput = stdout
+        p.standardError = FileHandle.nullDevice
+        do { try p.run() } catch { completion(nil); return nil }
+        stdin.fileHandleForWriting.write(Data(input.utf8))
+        try? stdin.fileHandleForWriting.close()
+
+        DispatchQueue.global(qos: .utility).async {
+            let data = stdout.fileHandleForReading.readDataToEndOfFile()
+            p.waitUntilExit()
+            var result: String?
+            if let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               obj["is_error"] as? Bool != true {
+                result = obj["result"] as? String
+            }
+            DispatchQueue.main.async { completion(result) }
+        }
+        return p
+    }
+}

@@ -5,24 +5,41 @@ struct ChatView: View {
     @EnvironmentObject private var store: ChatStore
     @AppStorage(Language.storageKey) private var language: Language = .fr
     @State private var draft = ""
+    @State private var inputHeight = InputField.lineHeight
+    @State private var inputFocusRequest = 0
     @State private var showingSettings = false
-    @FocusState private var inputFocused: Bool
+    @State private var scrollKeeper = ScrollKeeper()
+
+    @State private var editingTitle = false
+    @State private var titleDraft = ""
+    @State private var popupIsKey = true
+    @FocusState private var titleFocused: Bool
 
     var body: some View {
         VStack(spacing: 0) {
             header
             Divider().opacity(0.5)
-            if showingSettings {
-                SettingsView(onClose: { showingSettings = false })
-            } else {
-                conversation
-                inputBar
+            Group {
+                if showingSettings {
+                    SettingsView(onClose: { showingSettings = false })
+                } else {
+                    conversation
+                    inputBar
+                }
             }
+            // Clicking anywhere below the header confirms a title being edited.
+            .simultaneousGesture(TapGesture().onEnded { if editingTitle { commitTitle() } })
         }
         .frame(width: 380, height: 375)
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { _ in
-            // Focus the input every time the popup opens.
-            if !showingSettings { inputFocused = true }
+            popupIsKey = true
+            if !showingSettings && !editingTitle { inputFocusRequest += 1 }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didResignKeyNotification)) { _ in
+            // Closing the popup discards an unfinished rename.
+            popupIsKey = false
+            if editingTitle { cancelTitle() }
+            store.persistScroll()
         }
     }
 
@@ -33,24 +50,73 @@ struct ChatView: View {
             Image(nsImage: MenuBarIcon.image)
                 .renderingMode(.template)
                 .foregroundStyle(.secondary)
-            Text("Hibou")
-                .font(.system(size: 13, weight: .semibold))
-            Spacer()
+            titleView
+            Spacer(minLength: 8)
             if !showingSettings {
                 iconButton("square.and.pencil", help: language.t("Nouvelle conversation", "New conversation")) {
+                    cancelTitle()
                     store.newConversation()
                     draft = ""
-                    inputFocused = true
+                    inputFocusRequest += 1
                 }
                 .disabled(store.messages.isEmpty && !store.isRunning)
             }
             iconButton(showingSettings ? "xmark" : "gearshape",
                        help: showingSettings ? language.t("Fermer", "Close") : language.t("Réglages", "Settings")) {
+                if editingTitle { commitTitle() }
                 showingSettings.toggle()
             }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 9)
+    }
+
+    @ViewBuilder
+    private var titleView: some View {
+        if showingSettings {
+            Text(language.t("Réglages", "Settings"))
+                .font(.system(size: 13, weight: .semibold))
+        } else if editingTitle {
+            TextField("", text: $titleDraft)
+                .textFieldStyle(.plain)
+                .font(.system(size: 13, weight: .semibold))
+                .focused($titleFocused)
+                .onSubmit(commitTitle)
+                .onExitCommand(perform: cancelTitle)
+                .onChange(of: titleFocused) {
+                    guard !titleFocused, editingTitle else { return }
+                    // Focus also drops when the popup closes: tell the two cases apart.
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                        guard editingTitle else { return }
+                        popupIsKey ? commitTitle() : cancelTitle()
+                    }
+                }
+        } else {
+            Text(store.displayTitle(language))
+                .font(.system(size: 13, weight: .semibold))
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .contentShape(Rectangle())
+                .onTapGesture(perform: startEditingTitle)
+                .help(language.t("Cliquer pour renommer", "Click to rename"))
+        }
+    }
+
+    private func startEditingTitle() {
+        titleDraft = store.displayTitle(language)
+        editingTitle = true
+        DispatchQueue.main.async { titleFocused = true }
+    }
+
+    private func commitTitle() {
+        guard editingTitle else { return }
+        editingTitle = false
+        store.rename(titleDraft)
+        inputFocusRequest += 1
+    }
+
+    private func cancelTitle() {
+        editingTitle = false
     }
 
     private func iconButton(_ symbol: String, help: String, action: @escaping () -> Void) -> some View {
@@ -73,7 +139,7 @@ struct ChatView: View {
                 if store.messages.isEmpty {
                     emptyState
                 } else {
-                    LazyVStack(alignment: .leading, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 12) {
                         ForEach(store.messages) { message in
                             MessageRow(message: message, activity: store.activity, isRunning: store.isRunning)
                                 .id(message.id)
@@ -81,12 +147,19 @@ struct ChatView: View {
                         Color.clear.frame(height: 1).id("bottom")
                     }
                     .padding(12)
+                    .background(EnclosingScrollViewReader { scrollView in
+                        scrollKeeper.onScroll = { offset, atBottom in
+                            store.scrollOffset = offset
+                            store.scrollAtBottom = atBottom
+                        }
+                        scrollKeeper.attach(scrollView, restoreTo: store.scrollOffset, atBottom: store.scrollAtBottom)
+                    })
                 }
             }
             .onChange(of: store.messages) {
-                proxy.scrollTo("bottom", anchor: .bottom)
+                // Follow new text only if the user was already at the bottom.
+                if store.scrollAtBottom { proxy.scrollTo("bottom", anchor: .bottom) }
             }
-            .onAppear { proxy.scrollTo("bottom", anchor: .bottom) }
         }
     }
 
@@ -110,11 +183,15 @@ struct ChatView: View {
 
     private var inputBar: some View {
         HStack(alignment: .bottom, spacing: 8) {
-            TextField(language.t("Message…", "Message…"), text: $draft, axis: .vertical)
-                .textFieldStyle(.plain)
-                .lineLimit(1...6)
-                .focused($inputFocused)
-                .onSubmit(send)
+            InputField(text: $draft, height: $inputHeight, focusRequest: inputFocusRequest, onSubmit: send)
+                .frame(height: inputHeight)
+                .overlay(alignment: .topLeading) {
+                    if draft.isEmpty {
+                        Text(language.t("Message…", "Message…"))
+                            .foregroundStyle(.tertiary)
+                            .allowsHitTesting(false)
+                    }
+                }
                 .padding(.horizontal, 10)
                 .padding(.vertical, 7)
                 .background(
