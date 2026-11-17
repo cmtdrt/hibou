@@ -17,6 +17,9 @@ final class ChatStore: ObservableObject {
     /// Tool Claude is currently using (e.g. "Read"), shown while waiting.
     @Published private(set) var activity: String?
     @Published private(set) var title: String?
+    /// A reply finished while the popup was closed: shows a red dot on the menu bar icon.
+    @Published private(set) var hasUnread = false
+    private var popupOpen = false
 
     /// Scroll position, kept so reopening the popup lands where the user left off.
     var scrollOffset: CGFloat?
@@ -149,8 +152,15 @@ final class ChatStore: ObservableObject {
         applyRename(newTitle)
     }
 
-    /// Called when the popup closes.
-    func persistScroll() { save() }
+    func popupDidOpen() {
+        popupOpen = true
+        hasUnread = false
+    }
+
+    func popupDidClose() {
+        popupOpen = false
+        save()
+    }
 
     // MARK: - Titles
 
@@ -241,6 +251,7 @@ final class ChatStore: ObservableObject {
         pendingID = nil
         isRunning = false
         activity = nil
+        if !popupOpen { hasUnread = true }
         save()
 
         if let pending = pendingRename {

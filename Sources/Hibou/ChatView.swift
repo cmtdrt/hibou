@@ -33,13 +33,14 @@ struct ChatView: View {
         .frame(width: 380, height: 375)
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { _ in
             popupIsKey = true
+            store.popupDidOpen()
             if !showingSettings && !editingTitle { inputFocusRequest += 1 }
         }
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didResignKeyNotification)) { _ in
             // Closing the popup discards an unfinished rename.
             popupIsKey = false
             if editingTitle { cancelTitle() }
-            store.persistScroll()
+            store.popupDidClose()
         }
     }
 

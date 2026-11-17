@@ -10,7 +10,7 @@ struct HibouApp: App {
             ChatView()
                 .environmentObject(store)
         } label: {
-            Image(nsImage: MenuBarIcon.image)
+            Image(nsImage: store.hasUnread ? MenuBarIcon.withBadge : MenuBarIcon.image)
         }
         .menuBarExtraStyle(.window)
     }
@@ -30,5 +30,30 @@ enum MenuBarIcon {
         let fallback = NSImage(systemSymbolName: "bird", accessibilityDescription: "Hibou")!
         fallback.isTemplate = true
         return fallback
+    }()
+
+    /// Same icon with a red dot. A template image can't hold color, so the owl is drawn
+    /// at display time in the menu bar's text color (follows light/dark menu bar).
+    static let withBadge: NSImage = {
+        let base = image
+        let size = base.size
+        let badged = NSImage(size: size, flipped: false) { rect in
+            base.draw(in: rect)
+            let dark = NSAppearance.currentDrawing().bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
+            (dark ? NSColor.white : NSColor.black).set()
+            rect.fill(using: .sourceAtop)
+
+            let diameter: CGFloat = 6.5
+            let dot = NSRect(x: rect.maxX - diameter, y: rect.maxY - diameter, width: diameter, height: diameter)
+            NSGraphicsContext.current?.compositingOperation = .clear
+            NSBezierPath(ovalIn: dot.insetBy(dx: -1.5, dy: -1.5)).fill()
+            NSGraphicsContext.current?.compositingOperation = .sourceOver
+            NSColor.systemRed.set()
+            NSBezierPath(ovalIn: dot).fill()
+            return true
+        }
+        badged.isTemplate = false
+        badged.cacheMode = .never
+        return badged
     }()
 }
