@@ -1,8 +1,14 @@
 # <img width="34" height="29" alt="image" src="https://github.com/user-attachments/assets/c5986644-d13c-40e6-905b-62ef381c89e2" /> Hibou is a tiny [claude code](https://docs.claude.com/en/docs/claude-code/overview) chat that lives in the macOS menu bar.
 
+<p align="center">
+  <img width="29%" alt="image" src="https://github.com/user-attachments/assets/0cc3621c-2b4d-41fe-a8fe-85475b597f97" />
+  &nbsp;&nbsp;
+  <img width="29%" alt="image" src="https://github.com/user-attachments/assets/4a17b35d-8709-4fbd-9009-ef3318e2df73" />
+  &nbsp;&nbsp;
+  <img width="29%" alt="image" src="https://github.com/user-attachments/assets/874fce7b-3e1e-4192-921e-6b5e78393e92" />
+</p>
 
-
-Click the owl, type or paste a message, press Return: Claude's reply appears in the popup. Click outside to close it. The conversation is kept until you start a new one.
+Open hibou, type or paste a message, press Enter: Claude's reply appears in the popup. Click outside to close it. The conversation is kept until you start a new one.
 
 ## Requirements
 
