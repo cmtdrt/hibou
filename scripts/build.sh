@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Usage: ./scripts/build.sh [--install]
+# Usage: ./scripts/build.sh [--install | --release]
+#   --release builds a universal (Apple silicon + Intel) app and zips it for a GitHub release.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -19,12 +20,21 @@ APP=build/Hibou.app
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 
+ARCHS=("$(uname -m)")
+[[ "${1:-}" == "--release" ]] && ARCHS=(arm64 x86_64)
+
 # Plain swiftc rather than `swift build`, which breaks on partially updated Command Line Tools.
-echo "→ Building…"
-swiftc -O -parse-as-library \
-  -target "$(uname -m)-apple-macos14.0" \
-  Sources/Hibou/*.swift \
-  -o "$APP/Contents/MacOS/Hibou"
+echo "→ Building (${ARCHS[*]})…"
+BINARIES=()
+for arch in "${ARCHS[@]}"; do
+  swiftc -O -parse-as-library \
+    -target "$arch-apple-macos14.0" \
+    Sources/Hibou/*.swift \
+    -o "build/Hibou-$arch"
+  BINARIES+=("build/Hibou-$arch")
+done
+lipo -create "${BINARIES[@]}" -output "$APP/Contents/MacOS/Hibou"
+rm -f "${BINARIES[@]}"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
 cp Resources/MenuBarIcon.svg "$APP/Contents/Resources/MenuBarIcon.svg"
 
@@ -44,4 +54,12 @@ if [[ "${1:-}" == "--install" ]]; then
   cp -R "$APP" /Applications/
   open /Applications/Hibou.app
   echo "✓ Installed to /Applications and launched"
+fi
+
+if [[ "${1:-}" == "--release" ]]; then
+  VERSION=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" Resources/Info.plist)
+  ZIP="build/hibou-$VERSION.zip"
+  rm -f "$ZIP"
+  ditto -c -k --keepParent "$APP" "$ZIP"
+  echo "✓ $ZIP"
 fi

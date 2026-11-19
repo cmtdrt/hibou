@@ -12,10 +12,24 @@ Open hibou, type or paste a message, press Enter: Claude's reply appears in the 
 
 ## Requirements
 
-- macOS 14 (Sonoma) or later
+- macOS 14 (Sonoma) or later, Apple silicon or Intel
 - [Claude Code](https://docs.claude.com/en/docs/claude-code/setup) installed and logged in
 
-## Installation
+## Download
+
+1. Download `hibou-x.y.z.zip` from the [latest release](https://github.com/cmtdrt/hibou/releases/latest).
+2. Unzip it and move **Hibou** to your Applications folder.
+3. Open it. The owl appears in the menu bar.
+
+The app is not notarized by Apple, so macOS blocks it the first time. To open it anyway, go to **System Settings → Privacy & Security** and click **Open Anyway** next to the Hibou message. Or run once in a terminal:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/Hibou.app
+```
+
+## Build from source
+
+Requires the Apple Command Line Tools (`xcode-select --install`).
 
 ```bash
 git clone https://github.com/cmtdrt/hibou.git
@@ -23,7 +37,7 @@ cd hibou
 ./scripts/build.sh --install
 ```
 
-The script builds the app, copies it to `/Applications` and launches it. The owl appears in the menu bar.
+The script builds the app, copies it to `/Applications` and launches it.
 
 ## Permissions
 
@@ -38,9 +52,15 @@ All of them are allowed by default and can be turned off in the settings. Claude
 
 ## Updating
 
+Download the new release and replace the app in Applications, or from the source folder:
+
 ```bash
 git pull
 ./scripts/build.sh --install
 ```
 
-The script quits Hibou, replaces the app in `/Applications` and relaunches it. Your conversation and settings are kept.
+Your conversation and settings are kept.
+
+## License
+
+[MIT](LICENSE)
